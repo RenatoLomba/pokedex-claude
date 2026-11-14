@@ -167,6 +167,12 @@ Browser ──► GET /api/pokemon (app/api/pokemon/route.ts)
 
 Add project-specific notes here. This section is never auto-modified.
 
+### Branch per feature
+
+- **Every new feature request starts on a new branch.** Before editing any file, update `main` (`git checkout main && git pull`) and create a branch from it named `feat/<short-kebab-description>` (e.g. `feat/theme-toggle`).
+- Don't add a new feature to `main` or to another feature's branch, even an open or merged one. If uncommitted changes are present, ask before switching branches.
+- Follow-ups and fixes to the feature in progress stay on its branch. Use `fix/…` or `docs/…` when the request is a fix or a docs change rather than a feature.
+
 @AGENTS.md
 
 <!-- END MANUAL -->
