@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Stack**: Next.js App Router, React, Tailwind CSS (CSS-first config), TypeScript throughout.
 - **Backend-for-frontend (BFF)**: a Next.js route handler (`GET /api/pokemon`) is the only thing the browser calls. It fetches PokéAPI on the server, transforms the list and serves it from an in-memory stale-while-revalidate cache.
-- **Frontend**: client-side search (name or `#number`), infinite scroll, lazy images with missing-image placeholders, dark mode that follows the system, and loading, empty and error states.
+- **Frontend**: client-side search (name or `#number`), infinite scroll, lazy images with missing-image placeholders, dark mode that follows the system with a manual Light / System / Dark toggle, and loading, empty and error states.
 - No database or extra services. The cache lives per server process and resets on restart.
 
 <!-- END AUTO-MANAGED -->
@@ -37,15 +37,17 @@ npm start        # serve the production build
 
 ```
 app/
-  layout.tsx            Root layout: Inter font (next/font), metadata, themeColor viewport
+  layout.tsx            Root layout: Inter font (next/font), metadata, themeColor viewport, inline theme script
   page.tsx              Server component: page header + <Pokedex />
-  globals.css           Tailwind import, @theme tokens (brand colors, font), card-in animation
+  globals.css           Tailwind import, custom dark variant, @theme tokens (brand colors, font), card-in animation
   api/pokemon/route.ts  BFF endpoint (force-dynamic), sets cache headers, 503 on cold failure
 components/
   Pokedex.tsx           "use client": fetch, search, infinite scroll, loading/error/empty states
   PokemonCard.tsx       "use client": memoized card + SafeImage (img with fallback)
+  ThemeToggle.tsx       "use client": Light / System / Dark switch, saved in localStorage
 lib/
   pokemon.ts            Server-only data layer: PokéAPI fetch, transform, SWR cache
+  theme.ts              Theme type, storage key, pre-paint THEME_INIT_SCRIPT (shared by layout and toggle)
   format.ts             formatName ("mr-mime" -> "Mr Mime"), formatId (25 -> "#0025")
   types.ts              Pokemon = { id, name, icon, image }
 ```
@@ -120,6 +122,11 @@ Browser ──► GET /api/pokemon (app/api/pokemon/route.ts)
 - **Defensive parsing**: external JSON is cast and then validated (`Array.isArray(json?.results)`, numeric-ID regex). Invalid entries are dropped with a type-guard `filter((p): p is Pokemon => p !== null)`.
 - **Error narrowing**: `err instanceof Error ? err.message : …` in every `catch` block. `catch` variables are typed `unknown`.
 - **Fire-and-forget**: deliberately un-awaited promises are prefixed with `void` (`void refresh()`, `void fetchList()`).
+- **Theming**:
+  - `dark:` is a custom variant in `globals.css`: it matches `<html data-theme="dark">`, or the OS dark preference when `data-theme` isn't `light`. No attribute means "system", so dark mode works before and without JS.
+  - `THEME_INIT_SCRIPT` runs in `<head>` and sets `data-theme` from localStorage before first paint; `<html>` has `suppressHydrationWarning` for that reason.
+  - `ThemeToggle` reads the choice with `useSyncExternalStore` (server snapshot is `"system"`) and re-applies it in `useLayoutEffect` because the dev Strict Mode remount strips `<html>` attributes.
+  - The `themeColor` viewport meta still follows the OS preference, not the manual choice.
 - **Images**:
   - Plain `<img>`, not `next/image`; the code carries an eslint-disable comment for this. Images load straight from the sprite CDN.
   - Each image has fixed `width`/`height`, `loading="lazy"` except the first `EAGER_COUNT`, `decoding="async"`, and a `loading | loaded | failed` state machine with an SVG placeholder on error.

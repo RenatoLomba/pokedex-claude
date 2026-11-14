@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/*
+ * `dark:` applies when the user picked dark (data-theme="dark"), or when they picked nothing / "system" and the OS
+ * prefers dark. An explicit data-theme="light" wins over a dark OS.
+ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --color-brand-500: oklch(0.63 0.22 25);
@@ -8,6 +23,15 @@
 
 :root {
   color-scheme: light dark;
+}
+
+/* Native controls and scrollbars follow the manual choice too. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
